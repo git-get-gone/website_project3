@@ -1,0 +1,17 @@
+---
+title: "Get to Know Jordan Vickers"
+image: media/me_headshot.jpeg
+toc: false
+about: 
+  template: broadside
+  image-shape: round
+  links: 
+  - icon: linkedin
+    href: https://www.linkedin.com/in/jepvick/
+  - icon: envelope
+    href: mailto:jepvick@gmail.com
+  - icon: github
+    href: https://github.com/git-get-gone
+---
+
+Hi, My name is Jordan Vickers. I am a soon to be graduate of St. Olaf College as a Physics and Math major with a concentration in Statistics and Data Science. I love any kind of problems that involve pattern recognition and enjoy keeping both my mind and body active! I hope to continuously update this site with new and exciting projects showcasing my aptitude and passion for working with data. On this website, I would like to highlight some of my projects I have contributed on throughout my time at St. Olaf.

@@ -1,0 +1,24 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Jordan Vickers"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - mini1.qmd
+      - mini2.qmd
+    search: true
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    page-layout: full
+
+editor: visual
+
+

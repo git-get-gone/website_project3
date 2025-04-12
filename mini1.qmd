@@ -1,0 +1,223 @@
+---
+title: "Mapping Project"
+author: "Jordan Vickers"
+sidebar: false
+format:
+  html: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: false
+
+# Initial packages required (we'll be adding more)
+library(tidyverse)
+library(mdsr)      # package associated with our MDSR book
+library(poliscidata)
+library(viridis)
+library(maps) #used to get us_states data
+library(leaflet)
+
+
+# Create labels that pop up when we hover over a state.  The labels must
+#   be part of a list where each entry is tagged as HTML code.
+library(htmltools)
+library(glue)
+
+```
+
+------------------------------------------------------------------------
+
+# Static Plots
+
+The first statistic I would like to investigate are the literacy rates among states. Literacy rates are incredibly important and have sweeping effects on people's employment opportunities, educational attainment and overall quality of life. The data comes from the [The World Population Review](https://worldpopulationreview.com/state-rankings/us-literacy-rates-by-state) though it does not state the exact literacy rates. In actuality, it gives the percentage of the adult population that fall under the category of low literacy rates for 2024. According to the National Center for Education Statistics, low literacy is defined as "those performing at PIAAC literacy proficiency level 1 or below or who could not participate due to a language barrier or a cognitive or physical inability to be interviewed." These adults are able to process meaning at the sentence level meaning they can only read short, simple paragraphs. (https://nces.ed.gov/surveys/piaac/measure.asp)
+
+In order to accomplish this graph, we use geometic map data of the US states.
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: true
+
+us_states <- map_data("state") #This contains the geometric map data
+literacy <- read_csv("~/Desktop/data science/us.-literacy-rates-by-state-2024 (1).csv") 
+
+
+literacy <- literacy |>
+  mutate(state = str_to_lower(state)) %>%
+  rename(low_lit = LiteracyRatesPercofPopulationWithLowLiteracy)
+
+literacy |>
+  right_join(us_states, by = c("state" = "region")) |> #state in literacy and region in us_states
+  rename(region = state) |>
+  ggplot(mapping = aes(x = long, y = lat,
+                          group = group)) + 
+  geom_polygon(aes(fill = low_lit), color = "black")+
+  labs(
+    title = "Map of the US showing % of State Population with Low Literacy",
+    fill = "% of Population with Low Literacy",
+    caption = "Source: The World Population Review"
+  )+
+  coord_map() + #makes it scale correctly 
+  theme_void() + 
+  scale_fill_viridis(option = "E")
+```
+
+This is a color coded choropleth map showing the percentage of the state population that has a low literacy rate. The legend shows that the percentage of low literacy ranges from about 0 to over 25% with darker blue colors representing a small percentage of low literacy ranging to brighter yellow that represents a higher percentage of low literacy. We notice that southern states appear to have higher percentages of low literacy as notice they appear more yellow in color. Texas, California and New Mexico stand out as having the highest percentage. In contrast, northern states appear to have lower percentages of low literacy especially upper New England such as New Hampshire and Midwest states like Minnesota and Montana.
+
+\newpage
+
+My second statistic I would like to to investigate are obesity rates in America. The data was sourced from [Data.Gov](https://catalog.data.gov/dataset/national-obesity-by-state-d765a) gives the state obesity rate for 2015. Obesity is a growing problem in America, as it poses significant health risks to thousands of people. However different states have varying levels of obesity. Here we can investigate which states are above and below the average obesity percentage in America to see if there are any patterns in obesity rates.
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: true
+
+obesity <- read_csv("~/Desktop/data science/LakeCounty_Health_-6177935595181947989.csv")
+
+obesity <- obesity %>%
+  rename(state = NAME) %>%
+  mutate(state = str_to_lower(state)) %>%
+  mutate(above_below = ifelse(Obesity > mean(Obesity), "Above", "Below")) 
+
+
+obesity |>
+  mutate(state = str_to_lower(state)) %>%
+  right_join(us_states, by = c("state" = "region")) |>
+  rename(region = state) |>
+  ggplot(mapping = aes(x = long, y = lat,
+                          group = group)) + 
+  geom_polygon(aes(fill = above_below), color = "darkgrey", linewidth = 0.4) + 
+  labs(fill = "Above or Below Mean",
+caption = "Source: Data.Gov",
+title = "Graph showing states with Obesity Rates Above or Below Average Rate") +
+  coord_map() + 
+  theme_void() +
+  scale_fill_viridis(discrete = TRUE, option = "E") #discrete = T makes it work for categorical data
+  #scale_fill_manual() #<1>
+```
+
+From the graph above, we notice that the majority of states with obesity rates above the average are in the middle of the United States on the right side. The Left side of the United States remains mostly below the average apart from Oregon. We also notice Minnesota as anomaly in the middle being below the average obesity rate. This may point to cultural reasons for obesity, as many adjacent states share the same category, likely having similar food customs or ways of life that may lead to obesity. The spread is also vertical with similar categories spanning the length of the US and being split in half by the breadth. This map may be further enhanced if it could be cross referenced with a map showing the prevalence of fast food chains such as McDonald's.
+
+------------------------------------------------------------------------
+
+# Interactive Plots
+
+Below are more plot that provide interactive information on literacy. Here you can hover over a state and see the obesity and literary rate so that you can easily compare it with their neighboring states. Both plots make use of `sf` data in conjunction with the `leaflet` package. Here I transform the obesity and literacy data to match the provided geometric data pulled from a github repository.
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: true
+
+
+library(sf) 
+
+states <- read_sf("https://rstudio.github.io/leaflet/json/us-states.geojson")  
+
+
+# Create our own category bins for population densities
+#   and assign the yellow-orange-red color palette
+bins <- c(0,11,15,20,25,29,Inf)
+pal <- colorBin("inferno", domain = literacy$low_lit, bins = bins)
+
+literacy <- literacy |>
+  mutate(labels = str_c(str_to_title(state), ": ", low_lit))
+
+# If want more HTML formatting, use these lines instead of those above:
+#states <- states |>
+#  mutate(labels = glue("<strong>{name}</strong><br/>{density} people / #mi<sup>2</sup>"))
+
+labels <- lapply(literacy$labels, HTML)
+
+states <- states %>%
+  mutate(name = str_to_lower(name)) %>%
+  filter(name != "district of columbia" & name != "puerto rico" )
+
+
+states$low_lit <- literacy$low_lit #need to add it like this so that the spacial data remains because joining causes it to lose the sf
+
+leaflet(states) |>
+  setView(-96, 37.8, 4) |>
+  addTiles() |>
+  addPolygons(
+    fillColor = ~pal(low_lit),
+    weight = 2,
+    opacity = 1,
+    smoothFactor = 0.5,
+    color = "white",
+    dashArray = "2",
+    fillOpacity = 0.7,
+    highlightOptions = highlightOptions(
+      weight = 5,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) |>
+  addLegend(pal = pal, values = ~literacy$low_lit, opacity = 0.7, title = NULL,
+    position = "bottomright")
+```
+
+Obesity map
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: true
+
+
+obesity_pal <- colorFactor(viridis(2), states$above_below) #This creates a color factor for above and below
+
+obesity <- obesity |>
+  mutate(labels = str_c(str_to_title(state), ": ", Obesity)) %>% #show the obesity rate when you hover over
+  arrange(state) #need to arrange so when merged with states data it lines up correctly for obesity
+
+labels <- lapply(obesity$labels, HTML) #
+
+obesity <- obesity %>%
+   filter(state != "district of columbia" & state != "puerto rico" ) #do the same for obesity just in case
+
+states <- states %>%
+  mutate(name = str_to_lower(name)) %>%
+  filter(name != "district of columbia" & name != "puerto rico" ) #need to remove these two from data since obesity data does not have district of columbia and puerto rico 
+
+states$above_below <- obesity$above_below # Add above below to states data
+
+# obesity %>%
+#   anti_join(states, by = c("state" = "name"))
+
+leaflet(states) |>
+  setView(-96, 37.8, 4) |>
+  addTiles() |>
+  addPolygons(
+    fillColor = ~obesity_pal(above_below), #use the pal from above
+    weight = 2,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlightOptions = highlightOptions(
+      weight = 5,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) |>
+  addLegend(pal = obesity_pal, values = obesity$above_below, opacity = 0.7, title = NULL,
+    position = "bottomright")
+```
+
+Literacy Map
