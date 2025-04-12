@@ -32,7 +32,11 @@ basketball_site <- read_html("https://www.sports-reference.com/cbb/seasons/men/1
 basketball_site
 ```
 
+
+
 As you see above we first start off reading the pure html document. We will sift through these tags to find the table we want. We need to look at both the Advanced school stats and the conference data. The immediate code below functionizes the process so we can find the tables for varying years. The code below finds the table containing game data for each school.
+
+## School Data
 
 ```{r}
 #| message: false
@@ -74,6 +78,8 @@ years<- c("2002","2001")
 test2 <- basketball_stats(years)
 
 ```
+
+## Concert Data
 
 This code serves as an extension of this code in order to find conference data as well.
 
