@@ -10,6 +10,7 @@ website:
         text: Home
       - mini1.qmd
       - mini2.qmd
+      - miniporject4.qmd
     search: true
 
 format:
