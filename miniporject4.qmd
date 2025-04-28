@@ -31,6 +31,11 @@ In this project, I seek to use a kaggle database of Youtube Statistics to analys
 
 ```{r}
 
+#| message: false
+#| warning: false
+#| echo: false
+
+
 comments <- read_csv("~/Project 3/Youtube Statistics/comments.csv")
 stats <- read_csv("~/Project 3/Youtube Statistics/videos-stats.csv")
 
